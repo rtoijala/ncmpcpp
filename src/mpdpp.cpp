@@ -619,8 +619,8 @@ bool Connection::AddRandomTag(mpd_tag_type tag, size_t number, std::mt19937 &rng
 			//   probabilities would require requesting data for all songs from MPD.
 			// - Albums with identical names count as only one album for the check
 			//   `numbers > tags.size()` above. This does not matter much.
-			// - If one album has album artist A, and another identically named  album has
-			//   album artists A, and B, then picking the first album will also add the
+			// - If one album has album artist A, and another identically named album has
+			//   album artists A and B, then picking the first album will also add the
 			//   second album. This is very unlikely to happen in real life.
 			std::vector<Song> songs;
 			std::set<std::string> album_artists;
@@ -631,7 +631,18 @@ bool Connection::AddRandomTag(mpd_tag_type tag, size_t number, std::mt19937 &rng
 				{
 					std::string aa = s->getAlbumArtist(idx);
 					if (aa.empty())
+					{
+						// If the song has no album artists, treat the empty string as the
+						// album artist. This way even albums without album artists have a
+						// chance to be chosen. Though if there are two or more albums
+						// without album artists, we treat them as one since we cannot
+						// distinguish between them.
+						if (idx == 0)
+						{
+							album_artists.insert("");
+						}
 						break;
+					}
 					album_artists.insert(aa);
 				}
 			}
@@ -651,13 +662,16 @@ bool Connection::AddRandomTag(mpd_tag_type tag, size_t number, std::mt19937 &rng
 					add = true;
 				else
 				{
-					for (unsigned idx = 0; !add; ++idx)
+					for (unsigned idx = 0; ; ++idx)
 					{
 						std::string aa = song.getAlbumArtist(idx);
+						if (aa == selected_album_artist)
+						{
+							add = true;
+							break;
+						}
 						if (aa.empty())
 							break;
-						if (aa == selected_album_artist)
-							add = true;
 					}
 				}
 				if (add)
