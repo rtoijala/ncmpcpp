@@ -665,13 +665,21 @@ bool Connection::AddRandomTag(mpd_tag_type tag, size_t number, std::mt19937 &rng
 					for (unsigned idx = 0; ; ++idx)
 					{
 						std::string aa = song.getAlbumArtist(idx);
+						if (aa.empty())
+						{
+							if (idx == 0 && selected_album_artist == "")
+							{
+								// The song has no album artists and the selected album
+								// artist is empty, so add the song anyway.
+								add = true;
+							}
+							break;
+						}
 						if (aa == selected_album_artist)
 						{
 							add = true;
 							break;
 						}
-						if (aa.empty())
-							break;
 					}
 				}
 				if (add)
